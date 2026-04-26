@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Project Proactive Defense{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>System Settings</h1>
+</div>
+
+<div class="card">
+    <div class="card-header">Module Configuration</div>
+    <p class="mb-2">Enable or disable monitoring modules and adjust system settings.
+       Changes are saved and applied immediately.</p>
+
+    <form method="POST" action="{{ url_for('dashboard.settings') }}">
+        <div class="form-group">
+            <label for="malware_detection_enabled">Malware Detection Module</label>
+            <select name="malware_detection_enabled" id="malware_detection_enabled" class="form-control" style="max-width:300px;">
+                <option value="true" {% if config.get('malware_detection_enabled') == 'true' %}selected{% endif %}>Enabled</option>
+                <option value="false" {% if config.get('malware_detection_enabled') == 'false' %}selected{% endif %}>Disabled</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="email_analysis_enabled">Email Analysis Module</label>
+            <select name="email_analysis_enabled" id="email_analysis_enabled" class="form-control" style="max-width:300px;">
+                <option value="true" {% if config.get('email_analysis_enabled') == 'true' %}selected{% endif %}>Enabled</option>
+                <option value="false" {% if config.get('email_analysis_enabled') == 'false' %}selected{% endif %}>Disabled</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="scan_interval">Automatic Scan Interval</label>
+            <select name="scan_interval" id="scan_interval" class="form-control" style="max-width:300px;">
+                <option value="hourly" {% if config.get('scan_interval') == 'hourly' %}selected{% endif %}>Every Hour</option>
+                <option value="daily" {% if config.get('scan_interval') == 'daily' %}selected{% endif %}>Daily</option>
+                <option value="weekly" {% if config.get('scan_interval') == 'weekly' %}selected{% endif %}>Weekly</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="alert_threshold">Minimum Alert Threshold</label>
+            <select name="alert_threshold" id="alert_threshold" class="form-control" style="max-width:300px;">
+                <option value="Low" {% if config.get('alert_threshold') == 'Low' %}selected{% endif %}>Low (show all alerts)</option>
+                <option value="Medium" {% if config.get('alert_threshold') == 'Medium' %}selected{% endif %}>Medium and above</option>
+                <option value="High" {% if config.get('alert_threshold') == 'High' %}selected{% endif %}>High only</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">System Information</div>
+    <table>
+        <tr><td><strong>Application</strong></td><td>Project Proactive Defense v1.0</td></tr>
+        <tr><td><strong>Framework</strong></td><td>Python / Flask</td></tr>
+        <tr><td><strong>Database</strong></td><td>SQLite (local storage)</td></tr>
+        <tr><td><strong>Detection Rules</strong></td><td>10 rules loaded</td></tr>
+    </table>
+</div>
+{% endblock %}

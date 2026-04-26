@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Project Proactive Defense{% endblock %}
+
+{% block unauthenticated %}
+<div class="login-wrapper">
+    <div class="login-card">
+        <h1>Proactive Defense</h1>
+        <div class="subtitle">Sign in to your cyber threat monitoring dashboard</div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" style="margin-bottom: 16px;">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-control"
+                       placeholder="Enter your username" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-control"
+                       placeholder="Enter your password" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:8px;">
+                Sign In
+            </button>
+        </form>
+
+        <div class="text-center mt-2">
+            <a href="{{ url_for('auth.register') }}">Create an account</a>
+        </div>
+
+        <div class="text-center mt-2 text-muted" style="font-size:12px;">
+            Default credentials: admin / admin123
+        </div>
+    </div>
+</div>
+{% endblock %}

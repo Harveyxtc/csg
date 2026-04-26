@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Project Proactive Defense{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Cyber Threat Monitoring Dashboard</h1>
+
+    <div class="flex-between" style="width:100%;">
+        <div class="flex gap-1">
+            <form method="POST" action="{{ url_for('dashboard.run_scan') }}" style="display:inline;">
+                <button type="submit" class="btn btn-primary">Run Detection Scan</button>
+            </form>
+            <form method="POST" action="{{ url_for('dashboard.generate_pdf') }}" style="display:inline;">
+                <input type="hidden" name="report_type" value="on_demand">
+                <button type="submit" class="btn btn-outline">Export PDF Report</button>
+            </form>
+        </div>
+
+        <button type="button" class="btn btn-outline" onclick="window.location.reload()">
+            Refresh Dashboard
+        </button>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="stats-grid">
+    <div class="stat-card total">
+        <div class="stat-value">{{ stats.total_events }}</div>
+        <div class="stat-label">Total Events</div>
+    </div>
+    <div class="stat-card high">
+        <div class="stat-value">{{ stats.high_severity }}</div>
+        <div class="stat-label">High Severity</div>
+    </div>
+    <div class="stat-card medium">
+        <div class="stat-value">{{ stats.medium_severity }}</div>
+        <div class="stat-label">Medium Severity</div>
+    </div>
+    <div class="stat-card low">
+        <div class="stat-value">{{ stats.low_severity }}</div>
+        <div class="stat-label">Low Severity</div>
+    </div>
+    <div class="stat-card open">
+        <div class="stat-value">{{ stats.open_events }}</div>
+        <div class="stat-label">Open Events</div>
+    </div>
+</div>
+
+<!-- SIEM Charts Row 1: Severity + Trend -->
+<div class="charts-grid">
+    <div class="chart-container">
+        <h3>Severity Distribution</h3>
+        <canvas id="severityChart" height="220"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>Event Trend (Last 7 Days)</h3>
+        <canvas id="trendChart" height="220"></canvas>
+    </div>
+</div>
+
+<!-- SIEM Charts Row 2: Module Breakdown + Top Threats -->
+<div class="charts-grid">
+    <div class="chart-container">
+        <h3>Severity by Module</h3>
+        <canvas id="moduleChart" height="220"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>Top Threat Categories</h3>
+        <canvas id="threatTypesChart" height="220"></canvas>
+    </div>
+</div>
+
+<!-- SIEM Charts Row 3: Hourly Activity + Status Breakdown -->
+<div class="charts-grid">
+    <div class="chart-container">
+        <h3>Activity by Hour of Day</h3>
+        <canvas id="hourlyChart" height="220"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>Event Status Overview</h3>
+        <canvas id="statusChart" height="220"></canvas>
+    </div>
+</div>
+
+<!-- Threats by Module Cards -->
+{% if stats.events_by_module %}
+<div class="card">
+    <div class="card-header">Threats by Module</div>
+    <div class="stats-grid" style="margin-bottom:0;">
+        {% for mod in stats.events_by_module %}
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--primary);">{{ mod.count }}</div>
+            <div class="stat-label">{{ mod.source_module }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Event Timeline -->
+<div class="card">
+    <div class="card-header flex-between">
+        <span>Recent Threat Events</span>
+        <a href="{{ url_for('dashboard.all_events') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+
+    {% if events %}
+    <div class="timeline">
+        {% for event in events %}
+        <div class="timeline-item {{ event.severity|lower }}">
+            <div class="flex-between">
+                <div>
+                    <span class="time">{{ event.timestamp }}</span>
+                    <div class="event-title">{{ event.event_type }}</div>
+                    <div class="event-detail">{{ event.explanation[:120] }}{% if event.explanation|length > 120 %}...{% endif %}</div>
+                </div>
+                <div style="text-align:right; min-width:120px;">
+                    <span class="badge badge-{{ event.severity|lower }}">{{ event.severity }}</span>
+                    <div class="text-muted" style="font-size:12px; margin-top:4px;">{{ event.source_module }}</div>
+                    {% if event.status == 'Open' %}
+                    <form method="POST" action="{{ url_for('dashboard.change_event_status', event_id=event.id) }}" style="margin-top:4px;">
+                        <input type="hidden" name="status" value="Acknowledged">
+                        <button type="submit" class="btn btn-sm btn-info">Acknowledge</button>
+                    </form>
+                    {% else %}
+                    <span class="badge badge-{{ event.status|lower }}" style="margin-top:4px;">{{ event.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center text-muted" style="padding: 40px;">
+        <p style="font-size:18px;">No threat events detected yet.</p>
+        <p style="margin-top:8px;">Upload log files via <a href="{{ url_for('dashboard.ingest_logs') }}">Ingest Logs</a> and run a detection scan.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    /* ═══════════════════════════════════════════════════════
+       SIEM Dashboard Charts — Chart.js
+       ═══════════════════════════════════════════════════════ */
+
+    const COLORS = {
+        high:    '#D32F2F',
+        medium:  '#F57F17',
+        low:     '#2E7D32',
+        primary: '#4B0082',
+        info:    '#1565C0',
+        grey:    '#9E9E9E',
+        highBg:    'rgba(211,47,47,0.15)',
+        mediumBg:  'rgba(245,127,23,0.15)',
+        lowBg:     'rgba(46,125,50,0.15)',
+        primaryBg: 'rgba(75,0,130,0.12)',
+    };
+
+    /* ── 1. Severity Distribution (Doughnut) ── */
+    new Chart(document.getElementById('severityChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['High', 'Medium', 'Low'],
+            datasets: [{
+                data: [{{ stats.high_severity }}, {{ stats.medium_severity }}, {{ stats.low_severity }}],
+                backgroundColor: [COLORS.high, COLORS.medium, COLORS.low],
+                borderWidth: 3,
+                borderColor: '#fff',
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '55%',
+            plugins: {
+                legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } }
+            }
+        }
+    });
+
+    /* ── 2. Event Trend Line (Last 7 Days) ── */
+    const trendData = {{ stats.events_by_day | tojson }};
+    const trendLabels = trendData.map(d => d.day).reverse();
+    const trendValues = trendData.map(d => d.count).reverse();
+
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: trendLabels,
+            datasets: [{
+                label: 'Events',
+                data: trendValues,
+                borderColor: COLORS.primary,
+                backgroundColor: COLORS.primaryBg,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 5,
+                pointBackgroundColor: COLORS.primary,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                borderWidth: 2.5,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f0f0f0' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    /* ── 3. Severity by Module (Stacked Bar) ── */
+    (function() {
+        const rawData = {{ stats.severity_by_module | tojson }};
+        const modules = [...new Set(rawData.map(r => r.source_module))];
+        const highData = modules.map(m => {
+            const row = rawData.find(r => r.source_module === m && r.severity === 'High');
+            return row ? row.count : 0;
+        });
+        const medData = modules.map(m => {
+            const row = rawData.find(r => r.source_module === m && r.severity === 'Medium');
+            return row ? row.count : 0;
+        });
+        const lowData = modules.map(m => {
+            const row = rawData.find(r => r.source_module === m && r.severity === 'Low');
+            return row ? row.count : 0;
+        });
+
+        new Chart(document.getElementById('moduleChart'), {
+            type: 'bar',
+            data: {
+                labels: modules,
+                datasets: [
+                    { label: 'High',   data: highData, backgroundColor: COLORS.high },
+                    { label: 'Medium', data: medData,  backgroundColor: COLORS.medium },
+                    { label: 'Low',    data: lowData,  backgroundColor: COLORS.low },
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 14 } }
+                },
+                scales: {
+                    x: { stacked: true, grid: { display: false } },
+                    y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f0f0f0' } }
+                }
+            }
+        });
+    })();
+
+    /* ── 4. Top Threat Categories (Horizontal Bar) ── */
+    (function() {
+        const threats = {{ stats.top_threats | tojson }};
+        const labels = threats.map(t => t.event_type);
+        const values = threats.map(t => t.count);
+        const barColors = values.map((_, i) => {
+            const palette = ['#4B0082','#6A1B9A','#8E24AA','#AB47BC','#CE93D8',
+                             '#1565C0','#1E88E5','#42A5F5','#64B5F6','#90CAF9'];
+            return palette[i % palette.length];
+        });
+
+        new Chart(document.getElementById('threatTypesChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Count',
+                    data: values,
+                    backgroundColor: barColors,
+                    borderRadius: 4,
+                    barThickness: 18,
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f0f0f0' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    })();
+
+    /* ── 5. Activity by Hour of Day (Bar) ── */
+    (function() {
+        const hourData = {{ stats.events_by_hour | tojson }};
+        const allHours = Array.from({length: 24}, (_, i) => i);
+        const hourLabels = allHours.map(h => (h < 10 ? '0' : '') + h + ':00');
+        const hourValues = allHours.map(h => {
+            const match = hourData.find(d => d.hour === h);
+            return match ? match.count : 0;
+        });
+        const hourColors = hourValues.map(v => {
+            if (v === 0) return '#E0E0E0';
+            if (v <= 1) return 'rgba(75,0,130,0.3)';
+            if (v <= 3) return 'rgba(75,0,130,0.55)';
+            return 'rgba(75,0,130,0.85)';
+        });
+
+        new Chart(document.getElementById('hourlyChart'), {
+            type: 'bar',
+            data: {
+                labels: hourLabels,
+                datasets: [{
+                    label: 'Events',
+                    data: hourValues,
+                    backgroundColor: hourColors,
+                    borderRadius: 3,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f0f0f0' } },
+                    x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } }
+                }
+            }
+        });
+    })();
+
+    /* ── 6. Event Status Overview (Pie) ── */
+    new Chart(document.getElementById('statusChart'), {
+        type: 'pie',
+        data: {
+            labels: ['Open', 'Acknowledged', 'Resolved'],
+            datasets: [{
+                data: [{{ stats.open_events }}, {{ stats.acknowledged_events }}, {{ stats.resolved_events }}],
+                backgroundColor: [COLORS.info, '#FF9800', COLORS.low],
+                borderWidth: 3,
+                borderColor: '#fff',
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } }
+            }
+        }
+    });
+</script>
+{% endblock %}

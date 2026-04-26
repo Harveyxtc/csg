@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Ingest Logs - Project Proactive Defense{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Ingest Log Files</h1>
+</div>
+
+<div class="card mb-2">
+    <div class="card-header">Upload CSV Log Files</div>
+    <p class="mb-2">Upload a CSV file containing security log entries. The file must include the following
+       columns: <strong>timestamp, event_type, user, ip_address, details</strong>.</p>
+
+    <p class="mb-2">Accepted event types: login_failed, login_success, email_received, email_sent,
+       file_change, file_access, malware_detected, network_scan, privilege_escalation,
+       config_change, brute_force, phishing_attempt, suspicious_download, unauthorized_access.</p>
+
+    <form method="POST" action="{{ url_for('dashboard.ingest_logs') }}" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="logfile">Select CSV File</label>
+            <input type="file" id="logfile" name="logfile" class="form-control" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload and Ingest</button>
+    </form>
+</div>
+
+{% if result %}
+<div class="card">
+    <div class="card-header">Ingestion Results</div>
+    {% if result.success %}
+    <div class="stats-grid" style="margin-bottom:0;">
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--success);">{{ result.valid }}</div>
+            <div class="stat-label">Valid Entries Ingested</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--danger);">{{ result.rejected }}</div>
+            <div class="stat-label">Rejected Entries</div>
+        </div>
+    </div>
+    {% if result.errors %}
+    <div class="mt-2">
+        <strong>Rejection Details:</strong>
+        <ul style="margin-top:8px; padding-left:20px;">
+            {% for error in result.errors %}
+            <li class="text-muted" style="font-size:13px;">{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    <div class="mt-2">
+        <p>Now <a href="{{ url_for('dashboard.dashboard') }}">return to the Dashboard</a> and click
+           <strong>Run Detection Scan</strong> to process these logs through the detection engine.</p>
+    </div>
+    {% else %}
+    <div class="alert alert-danger">
+        Error: {{ result.error }}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">CSV File Format Example</div>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>timestamp</th>
+                    <th>event_type</th>
+                    <th>user</th>
+                    <th>ip_address</th>
+                    <th>details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2026-03-10 10:01</td>
+                    <td>login_failed</td>
+                    <td>admin</td>
+                    <td>192.168.1.10</td>
+                    <td>Invalid password</td>
+                </tr>
+                <tr>
+                    <td>2026-03-10 10:05</td>
+                    <td>email_received</td>
+                    <td>user1</td>
+                    <td>suspicious-domain.ru</td>
+                    <td>Possible phishing email</td>
+                </tr>
+                <tr>
+                    <td>2026-03-10 10:10</td>
+                    <td>file_change</td>
+                    <td>system</td>
+                    <td>local</td>
+                    <td>Multiple file rename activity</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+id,timestamp,event_type,source_module,severity,user_affected,ip_address,details,explanation,recommendation,status,created_at
+1,2026-03-10 08:03,Brute Force Login Attempt,System Monitor,High,admin,192.168.1.50,Invalid password,Someone tried to log in to your system multiple times with incorrect passwords. This is often a sign that an attacker is trying to guess a user's password by trying many combinations.,"1. Check if the affected user account is still secure and change the password immediately.
+2. Consider blocking the IP address (192.168.1.50) if it is not recognised.
+3. Enable two-factor authentication for all user accounts.
+4. Review login logs for any successful logins from this IP address.",Open,2026-03-22 04:14:20
+2,2026-03-10 08:05,Brute Force Login Attempt,System Monitor,High,admin,192.168.1.50,Invalid password,Someone tried to log in to your system multiple times with incorrect passwords. This is often a sign that an attacker is trying to guess a user's password by trying many combinations.,"1. Check if the affected user account is still secure and change the password immediately.
+2. Consider blocking the IP address (192.168.1.50) if it is not recognised.
+3. Enable two-factor authentication for all user accounts.
+4. Review login logs for any successful logins from this IP address.",Open,2026-03-22 04:14:20
+3,2026-03-10 09:15,Phishing Email Detected,Email Analysis,Medium,user1,suspicious-domain.ru,Possible phishing email from unknown sender,An email was received from a domain that appears suspicious or is known to be used in phishing attacks. Phishing emails try to trick you into clicking dangerous links or sharing sensitive information like passwords.,"1. Do NOT click any links or download any attachments from this email.
+2. Do NOT reply to the email or provide any personal information.
+3. Report the email to your email provider as phishing.
+4. If you already clicked a link, change your passwords immediately and run a malware scan.",Open,2026-03-22 04:14:20
+4,2026-03-10 09:30,Suspicious File Modification,Malware Detection,Medium,system,local,Multiple file rename activity detected in Documents folder,"Unusual file activity was detected on your system. Multiple files were renamed or modified in a short period of time. This could indicate ransomware attempting to encrypt your files, or an unauthorised user making changes.","1. Check the affected files and folders to see what was changed.
+2. If files have unusual extensions (e.g., .locked, .encrypted), disconnect from the network immediately.
+3. Run a full malware scan on your system.
+4. Restore any affected files from your most recent backup.
+5. Contact your IT support or cybersecurity advisor if you suspect ransomware.",Open,2026-03-22 04:14:20
+5,2026-03-10 10:00,Malware Detected on System,Malware Detection,High,user2,local,Trojan signature detected in downloaded file update.exe,"A file on your system has been identified as malware (malicious software). Malware can steal your data, damage your files, or give attackers access to your computer without your knowledge.","1. Do NOT open or run the detected file.
+2. Run a full system scan with your antivirus software.
+3. Delete or quarantine the infected file.
+4. Check if any sensitive data may have been accessed or stolen.
+5. Update your antivirus definitions and operating system.",Open,2026-03-22 04:14:20
+6,2026-03-10 10:47,Brute Force Login Attempt,System Monitor,High,user3,10.0.0.99,Invalid password,Someone tried to log in to your system multiple times with incorrect passwords. This is often a sign that an attacker is trying to guess a user's password by trying many combinations.,"1. Check if the affected user account is still secure and change the password immediately.
+2. Consider blocking the IP address (10.0.0.99) if it is not recognised.
+3. Enable two-factor authentication for all user accounts.
+4. Review login logs for any successful logins from this IP address.",Open,2026-03-22 04:14:20
+7,2026-03-10 11:00,Network Port Scan Detected,System Monitor,Low,external,203.0.113.42,Port scan detected from external IP on ports 22 80 443,"An external computer scanned your network to find open ports and services. Port scanning is often the first step in a cyberattack, where attackers look for vulnerable entry points into your system.","1. Check your firewall settings and ensure unnecessary ports are closed.
+2. Block the scanning IP address (203.0.113.42) if it is not recognised.
+3. Verify that only required services are running on your network.
+4. Monitor for follow-up attacks from the same IP address.",Open,2026-03-22 04:14:20
+8,2026-03-10 11:30,Phishing Email Detected,Email Analysis,Medium,user4,phishing-site.cn,Urgent verify your account email with suspicious link,An email was received from a domain that appears suspicious or is known to be used in phishing attacks. Phishing emails try to trick you into clicking dangerous links or sharing sensitive information like passwords.,"1. Do NOT click any links or download any attachments from this email.
+2. Do NOT reply to the email or provide any personal information.
+3. Report the email to your email provider as phishing.
+4. If you already clicked a link, change your passwords immediately and run a malware scan.",Open,2026-03-22 04:14:20
+9,2026-03-10 12:00,Configuration Change,System Monitor,Low,admin,192.168.1.1,Firewall rule modified by administrator,"A system configuration setting was changed. While this may be a normal administrative action, unexpected configuration changes could indicate that someone is tampering with your system settings.","1. Verify that the configuration change was made by an authorised person.
+2. Review what was changed and confirm it was intentional.
+3. Keep a record of all configuration changes for auditing purposes.",Open,2026-03-22 04:14:20
+10,2026-03-10 13:15,Suspicious Download,Malware Detection,Medium,user2,172.16.0.5,Downloaded suspicious file report.exe from untrusted site,"A file was downloaded that may be dangerous. Certain file types (such as .exe, .bat, or .ps1 files) can run programs on your computer that may harm your system or steal your information.","1. Do NOT open or run the downloaded file.
+2. Scan the file with your antivirus software before opening.
+3. Verify the source of the download — only download files from trusted websites.
+4. Delete the file if you did not intentionally download it.",Open,2026-03-22 04:14:20
+11,2026-03-10 14:00,Phishing Attempt via Email Link,Email Analysis,High,user1,malicious-link.com,Email containing link to known phishing site detected,An email was received containing a link to a website known for phishing. These websites are designed to look like legitimate sites (such as your bank or email provider) to steal your login credentials and personal data.,"1. Do NOT click the link in the email under any circumstances.
+2. Delete the email or report it as phishing to your email provider.
+3. If you clicked the link, immediately change your passwords for all accounts.
+4. Run a malware scan on your computer.
+5. Enable two-factor authentication on all critical accounts.",Open,2026-03-22 04:14:20
+12,2026-03-10 14:30,Privilege Escalation Attempt,System Monitor,High,user5,192.168.1.100,User attempted to access admin panel without authorisation,A user or process attempted to gain higher-level access rights than they are authorised to have. This is a serious security concern as it could allow an attacker to take control of your system or access confidential data.,"1. Verify which user account was involved and confirm if the action was legitimate.
+2. If unauthorised, immediately disable the user account.
+3. Review all recent activity from this user for other suspicious behaviour.
+4. Ensure all user accounts follow the principle of least privilege.
+5. Report this incident to your cybersecurity advisor.",Open,2026-03-22 04:14:20
+13,2026-03-10 15:00,Unauthorized Access Attempt,System Monitor,High,unknown,45.33.32.156,Attempted access to restricted API endpoint,Someone tried to access a part of your system or data that they are not authorised to use. This could be an attacker testing your security or a misconfigured user account.,"1. Identify which resource was being accessed and by whom.
+2. Verify that access permissions are correctly configured.
+3. If the attempt came from an unknown source, consider blocking the IP address.
+4. Review your access control settings and user permissions.",Open,2026-03-22 04:14:20
+14,2026-03-10 15:30,Suspicious File Modification,Malware Detection,Medium,user2,local,Batch file rename with encrypted extension detected,"Unusual file activity was detected on your system. Multiple files were renamed or modified in a short period of time. This could indicate ransomware attempting to encrypt your files, or an unauthorised user making changes.","1. Check the affected files and folders to see what was changed.
+2. If files have unusual extensions (e.g., .locked, .encrypted), disconnect from the network immediately.
+3. Run a full malware scan on your system.
+4. Restore any affected files from your most recent backup.
+5. Contact your IT support or cybersecurity advisor if you suspect ransomware.",Open,2026-03-22 04:14:20
+15,2026-03-10 16:00,Phishing Email Detected,Email Analysis,Medium,user3,spam-sender.ru,Suspicious attachment detected in email,An email was received from a domain that appears suspicious or is known to be used in phishing attacks. Phishing emails try to trick you into clicking dangerous links or sharing sensitive information like passwords.,"1. Do NOT click any links or download any attachments from this email.
+2. Do NOT reply to the email or provide any personal information.
+3. Report the email to your email provider as phishing.
+4. If you already clicked a link, change your passwords immediately and run a malware scan.",Open,2026-03-22 04:14:20
+16,2026-03-11 08:02,Brute Force Login Attempt,System Monitor,High,admin,192.168.1.50,Invalid password,Someone tried to log in to your system multiple times with incorrect passwords. This is often a sign that an attacker is trying to guess a user's password by trying many combinations.,"1. Check if the affected user account is still secure and change the password immediately.
+2. Consider blocking the IP address (192.168.1.50) if it is not recognised.
+3. Enable two-factor authentication for all user accounts.
+4. Review login logs for any successful logins from this IP address.",Open,2026-03-22 04:14:20
+17,2026-03-11 09:00,Malware Detected on System,Malware Detection,High,user1,local,Ransomware signature found in encrypted archive,"A file on your system has been identified as malware (malicious software). Malware can steal your data, damage your files, or give attackers access to your computer without your knowledge.","1. Do NOT open or run the detected file.
+2. Run a full system scan with your antivirus software.
+3. Delete or quarantine the infected file.
+4. Check if any sensitive data may have been accessed or stolen.
+5. Update your antivirus definitions and operating system.",Open,2026-03-22 04:14:20
+18,2026-03-11 10:00,Phishing Email Detected,Email Analysis,Medium,user4,phishing-bank.com,Fake banking notification with suspicious link,An email was received from a domain that appears suspicious or is known to be used in phishing attacks. Phishing emails try to trick you into clicking dangerous links or sharing sensitive information like passwords.,"1. Do NOT click any links or download any attachments from this email.
+2. Do NOT reply to the email or provide any personal information.
+3. Report the email to your email provider as phishing.
+4. If you already clicked a link, change your passwords immediately and run a malware scan.",Open,2026-03-22 04:14:20
+19,2026-03-11 11:00,Network Port Scan Detected,System Monitor,Low,external,198.51.100.23,Sequential port scan detected targeting internal services,"An external computer scanned your network to find open ports and services. Port scanning is often the first step in a cyberattack, where attackers look for vulnerable entry points into your system.","1. Check your firewall settings and ensure unnecessary ports are closed.
+2. Block the scanning IP address (198.51.100.23) if it is not recognised.
+3. Verify that only required services are running on your network.
+4. Monitor for follow-up attacks from the same IP address.",Open,2026-03-22 04:14:20
+20,2026-03-11 12:00,Suspicious Download,Malware Detection,Medium,user3,local,Downloaded unknown macro-enabled document budget.xlsm,"A file was downloaded that may be dangerous. Certain file types (such as .exe, .bat, or .ps1 files) can run programs on your computer that may harm your system or steal your information.","1. Do NOT open or run the downloaded file.
+2. Scan the file with your antivirus software before opening.
+3. Verify the source of the download — only download files from trusted websites.
+4. Delete the file if you did not intentionally download it.",Open,2026-03-22 04:14:20
+21,2026-03-11 14:00,Configuration Change,System Monitor,Low,admin,192.168.1.1,SSH access configuration modified,"A system configuration setting was changed. While this may be a normal administrative action, unexpected configuration changes could indicate that someone is tampering with your system settings.","1. Verify that the configuration change was made by an authorised person.
+2. Review what was changed and confirm it was intentional.
+3. Keep a record of all configuration changes for auditing purposes.",Open,2026-03-22 04:14:20
+22,2026-03-12 09:02,Brute Force Login Attempt,System Monitor,High,user2,10.0.0.200,Invalid password,Someone tried to log in to your system multiple times with incorrect passwords. This is often a sign that an attacker is trying to guess a user's password by trying many combinations.,"1. Check if the affected user account is still secure and change the password immediately.
+2. Consider blocking the IP address (10.0.0.200) if it is not recognised.
+3. Enable two-factor authentication for all user accounts.
+4. Review login logs for any successful logins from this IP address.",Open,2026-03-22 04:14:20
+23,2026-03-12 10:00,Phishing Attempt via Email Link,Email Analysis,High,user5,credential-harvest.net,Spear phishing email targeting finance department,An email was received containing a link to a website known for phishing. These websites are designed to look like legitimate sites (such as your bank or email provider) to steal your login credentials and personal data.,"1. Do NOT click the link in the email under any circumstances.
+2. Delete the email or report it as phishing to your email provider.
+3. If you clicked the link, immediately change your passwords for all accounts.
+4. Run a malware scan on your computer.
+5. Enable two-factor authentication on all critical accounts.",Open,2026-03-22 04:14:20
+24,2026-03-12 11:00,Suspicious File Modification,Malware Detection,Medium,system,local,Multiple file rename with .locked extension detected,"Unusual file activity was detected on your system. Multiple files were renamed or modified in a short period of time. This could indicate ransomware attempting to encrypt your files, or an unauthorised user making changes.","1. Check the affected files and folders to see what was changed.
+2. If files have unusual extensions (e.g., .locked, .encrypted), disconnect from the network immediately.
+3. Run a full malware scan on your system.
+4. Restore any affected files from your most recent backup.
+5. Contact your IT support or cybersecurity advisor if you suspect ransomware.",Open,2026-03-22 04:14:20
+25,2026-03-12 13:00,Unauthorized Access Attempt,System Monitor,High,unknown,203.0.113.100,Repeated attempts to access admin dashboard,Someone tried to access a part of your system or data that they are not authorised to use. This could be an attacker testing your security or a misconfigured user account.,"1. Identify which resource was being accessed and by whom.
+2. Verify that access permissions are correctly configured.
+3. If the attempt came from an unknown source, consider blocking the IP address.
+4. Review your access control settings and user permissions.",Open,2026-03-22 04:14:20
+26,2026-03-12 14:00,Phishing Email Detected,Email Analysis,Medium,user1,clickhere-urgent.ru,Click here immediately to claim your prize phishing email,An email was received from a domain that appears suspicious or is known to be used in phishing attacks. Phishing emails try to trick you into clicking dangerous links or sharing sensitive information like passwords.,"1. Do NOT click any links or download any attachments from this email.
+2. Do NOT reply to the email or provide any personal information.
+3. Report the email to your email provider as phishing.
+4. If you already clicked a link, change your passwords immediately and run a malware scan.",Open,2026-03-22 04:14:20

@@ -1,0 +1,4 @@
+timestamp,event_type,user,ip_address,details
+2026-03-10 10:01,login_failed,admin,192.168.1.10,Invalid password
+2026-03-10 10:05,email_received,user1,suspicious-domain.ru,Possible phishing email
+2026-03-10 10:10,file_change,system,local,Multiple file rename activity

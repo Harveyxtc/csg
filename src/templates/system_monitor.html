@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}System Monitor - Project Proactive Defense{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>System Monitor Module</h1>
+</div>
+
+<div class="card mb-2">
+    <div class="card-header">About This Module</div>
+    <p>The System Monitor module tracks network and system-level events including login attempts,
+       privilege escalation, port scans, configuration changes, and unauthorised access attempts.
+       Alerts are generated with risk levels and plain-English guidance on how to respond.</p>
+</div>
+
+<div class="card">
+    <div class="card-header flex-between">
+        <span>System Monitor Events ({{ events|length }})</span>
+    </div>
+
+    {% if events %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Threat</th>
+                    <th>Severity</th>
+                    <th>User</th>
+                    <th>IP Address</th>
+                    <th>What Happened</th>
+                    <th>What To Do</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td style="white-space:nowrap;">{{ event.timestamp }}</td>
+                    <td><strong>{{ event.event_type }}</strong></td>
+                    <td><span class="badge badge-{{ event.severity|lower }}">{{ event.severity }}</span></td>
+                    <td>{{ event.user_affected or '-' }}</td>
+                    <td>{{ event.ip_address or '-' }}</td>
+                    <td style="max-width:220px;">{{ event.explanation }}</td>
+                    <td style="max-width:220px;">{{ event.recommendation }}</td>
+                    <td>
+                        <span class="badge badge-{{ event.status|lower }}">{{ event.status }}</span>
+                        {% if event.status == 'Open' %}
+                        <form method="POST" action="{{ url_for('dashboard.change_event_status', event_id=event.id) }}" style="margin-top:4px;">
+                            <input type="hidden" name="status" value="Acknowledged">
+                            <button type="submit" class="btn btn-sm btn-info">Acknowledge</button>
+                        </form>
+                        {% elif event.status == 'Acknowledged' %}
+                        <form method="POST" action="{{ url_for('dashboard.change_event_status', event_id=event.id) }}" style="margin-top:4px;">
+                            <input type="hidden" name="status" value="Resolved">
+                            <button type="submit" class="btn btn-sm btn-success">Resolve</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted" style="padding: 40px;">
+        <p>No system monitoring events have been recorded.</p>
+        <p class="mt-1">Upload log files and run a detection scan from the dashboard.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

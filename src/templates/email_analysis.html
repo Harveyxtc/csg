@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Email Analysis - Project Proactive Defense{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Email Analysis Module</h1>
+</div>
+
+<div class="card mb-2">
+    <div class="card-header">About This Module</div>
+    <p>The Email Analysis module scans email metadata and content for indicators of phishing,
+       malicious links, suspicious attachments, and other email-based threats. Each suspicious
+       email is assigned a risk level with plain-English explanations and recommended actions.</p>
+</div>
+
+<div class="card">
+    <div class="card-header flex-between">
+        <span>Email Analysis Events ({{ events|length }})</span>
+    </div>
+
+    {% if events %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Threat</th>
+                    <th>Severity</th>
+                    <th>User</th>
+                    <th>What Happened</th>
+                    <th>What To Do</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td style="white-space:nowrap;">{{ event.timestamp }}</td>
+                    <td><strong>{{ event.event_type }}</strong></td>
+                    <td><span class="badge badge-{{ event.severity|lower }}">{{ event.severity }}</span></td>
+                    <td>{{ event.user_affected or '-' }}</td>
+                    <td style="max-width:250px;">{{ event.explanation }}</td>
+                    <td style="max-width:250px;">{{ event.recommendation }}</td>
+                    <td>
+                        <span class="badge badge-{{ event.status|lower }}">{{ event.status }}</span>
+                        {% if event.status == 'Open' %}
+                        <form method="POST" action="{{ url_for('dashboard.change_event_status', event_id=event.id) }}" style="margin-top:4px;">
+                            <input type="hidden" name="status" value="Acknowledged">
+                            <button type="submit" class="btn btn-sm btn-info">Acknowledge</button>
+                        </form>
+                        {% elif event.status == 'Acknowledged' %}
+                        <form method="POST" action="{{ url_for('dashboard.change_event_status', event_id=event.id) }}" style="margin-top:4px;">
+                            <input type="hidden" name="status" value="Resolved">
+                            <button type="submit" class="btn btn-sm btn-success">Resolve</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted" style="padding: 40px;">
+        <p>No email analysis events have been recorded.</p>
+        <p class="mt-1">Upload log files and run a detection scan from the dashboard.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

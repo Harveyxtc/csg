@@ -1,0 +1,35 @@
+timestamp,event_type,user,ip_address,details
+2026-03-10 08:01,login_failed,admin,192.168.1.50,Invalid password
+2026-03-10 08:02,login_failed,admin,192.168.1.50,Invalid password
+2026-03-10 08:03,login_failed,admin,192.168.1.50,Invalid password
+2026-03-10 08:05,login_failed,admin,192.168.1.50,Invalid password
+2026-03-10 09:15,email_received,user1,suspicious-domain.ru,Possible phishing email from unknown sender
+2026-03-10 09:30,file_change,system,local,Multiple file rename activity detected in Documents folder
+2026-03-10 10:00,malware_detected,user2,local,Trojan signature detected in downloaded file update.exe
+2026-03-10 10:45,login_failed,user3,10.0.0.99,Invalid password
+2026-03-10 10:46,login_failed,user3,10.0.0.99,Invalid password
+2026-03-10 10:47,login_failed,user3,10.0.0.99,Invalid password
+2026-03-10 11:00,network_scan,external,203.0.113.42,Port scan detected from external IP on ports 22 80 443
+2026-03-10 11:30,email_received,user4,phishing-site.cn,Urgent verify your account email with suspicious link
+2026-03-10 12:00,config_change,admin,192.168.1.1,Firewall rule modified by administrator
+2026-03-10 13:15,suspicious_download,user2,172.16.0.5,Downloaded suspicious file report.exe from untrusted site
+2026-03-10 14:00,phishing_attempt,user1,malicious-link.com,Email containing link to known phishing site detected
+2026-03-10 14:30,privilege_escalation,user5,192.168.1.100,User attempted to access admin panel without authorisation
+2026-03-10 15:00,unauthorized_access,unknown,45.33.32.156,Attempted access to restricted API endpoint
+2026-03-10 15:30,file_change,user2,local,Batch file rename with encrypted extension detected
+2026-03-10 16:00,email_received,user3,spam-sender.ru,Suspicious attachment detected in email
+2026-03-11 08:00,login_failed,admin,192.168.1.50,Invalid password
+2026-03-11 08:01,login_failed,admin,192.168.1.50,Invalid password
+2026-03-11 08:02,login_failed,admin,192.168.1.50,Invalid password
+2026-03-11 09:00,malware_detected,user1,local,Ransomware signature found in encrypted archive
+2026-03-11 10:00,email_received,user4,phishing-bank.com,Fake banking notification with suspicious link
+2026-03-11 11:00,network_scan,external,198.51.100.23,Sequential port scan detected targeting internal services
+2026-03-11 12:00,suspicious_download,user3,local,Downloaded unknown macro-enabled document budget.xlsm
+2026-03-11 14:00,config_change,admin,192.168.1.1,SSH access configuration modified
+2026-03-12 09:00,login_failed,user2,10.0.0.200,Invalid password
+2026-03-12 09:01,login_failed,user2,10.0.0.200,Invalid password
+2026-03-12 09:02,login_failed,user2,10.0.0.200,Invalid password
+2026-03-12 10:00,phishing_attempt,user5,credential-harvest.net,Spear phishing email targeting finance department
+2026-03-12 11:00,file_change,system,local,Multiple file rename with .locked extension detected
+2026-03-12 13:00,unauthorized_access,unknown,203.0.113.100,Repeated attempts to access admin dashboard
+2026-03-12 14:00,email_received,user1,clickhere-urgent.ru,Click here immediately to claim your prize phishing email
