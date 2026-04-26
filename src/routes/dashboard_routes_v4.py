@@ -7,6 +7,8 @@ including the main overview, module views, and event management.
 
 
 import os
+import shutil
+import sqlite3
 
 from flask import (
     Blueprint, render_template, request, redirect,
@@ -23,6 +25,7 @@ from src.detection.detector import DetectionEngine
 from src.reporting.report_generator import ReportGenerator
 #from src.chatbot.assistant import SecurityAssistant
 from src.config import Config
+from src.agent.malware_agent_client import is_agent_available, request_json
 
 
 dashboard_blueprint = Blueprint(
@@ -116,6 +119,114 @@ def change_event_status(event_id):
     )
     flash(f"Event #{event_id} marked as {new_status}.", "success")
     return redirect(request.referrer or url_for("dashboard.all_events"))
+
+
+def _stop_active_folder_monitors(username):
+    """Stop active folder monitors before resetting data."""
+    stopped = 0
+
+    if not is_agent_available():
+        return stopped
+
+    stop_all_data, stop_all_status = request_json(
+        "POST",
+        "/folder-monitor/stop-all",
+        payload={},
+        username=username,
+        ensure_running=False,
+        timeout=3,
+    )
+    if stop_all_status == 200 and stop_all_data.get("success"):
+        return int(stop_all_data.get("stopped", 0) or 0)
+
+    # Fallback for older agents: stop this user's active sessions.
+    sessions_data, status = request_json(
+        "GET",
+        "/folder-monitor/sessions",
+        username=username,
+        ensure_running=False,
+        timeout=2,
+    )
+    if status != 200 or not sessions_data.get("success"):
+        return stopped
+
+    for session in sessions_data.get("sessions", []):
+        if session.get("status") != "active":
+            continue
+
+        session_id = session.get("session_id")
+        if not session_id:
+            continue
+
+        request_json(
+            "POST",
+            "/folder-monitor/stop",
+            payload={"session_id": session_id},
+            username=username,
+            ensure_running=False,
+            timeout=2,
+        )
+        stopped += 1
+
+    return stopped
+
+
+def _checkpoint_sqlite_database(database_path):
+    """Flush SQLite WAL state so the file copy replaces a stable database."""
+    if not os.path.exists(database_path):
+        return
+
+    conn = sqlite3.connect(database_path)
+    try:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+    finally:
+        conn.close()
+
+
+def _remove_sqlite_sidecar_files(database_path):
+    for suffix in ("-wal", "-shm"):
+        sidecar_path = database_path + suffix
+        if os.path.exists(sidecar_path):
+            os.remove(sidecar_path)
+
+
+@dashboard_blueprint.route("/reset-default", methods=["POST"])
+@login_required
+def reset_to_default():
+    """Replace the active database with the bundled default database."""
+    database_path = os.path.abspath(Config.DATABASE_PATH)
+    default_database_path = os.path.abspath(
+        os.path.join(os.path.dirname(Config.DATABASE_PATH), "proactive_defense_default.db")
+    )
+    data_dir = os.path.abspath(os.path.dirname(Config.DATABASE_PATH))
+
+    if os.path.commonpath([database_path, data_dir]) != data_dir:
+        flash("Reset failed: active database path is outside the data directory.", "danger")
+        return redirect(request.referrer or url_for("dashboard.dashboard"))
+
+    if os.path.commonpath([default_database_path, data_dir]) != data_dir:
+        flash("Reset failed: default database path is outside the data directory.", "danger")
+        return redirect(request.referrer or url_for("dashboard.dashboard"))
+
+    if not os.path.exists(default_database_path):
+        flash("Reset failed: data/proactive_defense_default.db was not found.", "danger")
+        return redirect(request.referrer or url_for("dashboard.dashboard"))
+
+    try:
+        stopped_count = _stop_active_folder_monitors(current_user.username)
+        _checkpoint_sqlite_database(database_path)
+        shutil.copy2(default_database_path, database_path)
+        _remove_sqlite_sidecar_files(database_path)
+        add_audit_entry(
+            action="reset_to_default",
+            performed_by=current_user.username,
+            details=f"Database reset to default. Stopped {stopped_count} active folder monitor session(s).",
+        )
+        flash("Database reset to default successfully.", "success")
+    except Exception as error:
+        flash(f"Reset failed: {error}", "danger")
+
+    return redirect(url_for("dashboard.dashboard"))
 
 
 # ──────────────────────────────────────────────────────────────
@@ -356,6 +467,4 @@ def chat():
         details=f"AI used for message: {user_message[:80]}"
     )
     return jsonify({"response": ai_answer})
-
-
 
