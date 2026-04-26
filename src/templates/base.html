@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block auto_refresh_meta %}
+    {% if current_user.is_authenticated %}
     <meta http-equiv="refresh" content="60">
+    {% endif %}
+    {% endblock %}
     <title>{% block title %}Project Proactive Defense{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
+{% if current_user.is_authenticated %}
 <div class="header">
     <button class="mobile-menu-btn">☰</button>
     <h1>Dashboard</h1>
@@ -17,7 +22,6 @@
 
 <div id="overlay" class="overlay" onclick="toggleSidebar()"></div>
 
-{% if current_user.is_authenticated %}
 <div class="app-wrapper">
 
     <!-- Sidebar Navigation -->
@@ -134,6 +138,7 @@
 
 {% block scripts %}{% endblock %}
 
+{% if current_user.is_authenticated %}
 <script>
 /* ── Chatbot Frontend Logic ── */
 function toggleChat() {
@@ -213,6 +218,7 @@ function removeTyping(id) {
     if (el) el.remove();
 }
 </script>
+{% endif %}
 
 </body>
 </html>
