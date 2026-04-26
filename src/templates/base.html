@@ -69,6 +69,11 @@
             <a href="{{ url_for('dashboard.audit_log') }}" class="{% if request.endpoint == 'dashboard.audit_log' %}active{% endif %}">
                 <span class="icon">&#128209;</span> Audit Log
             </a>
+            <form method="POST" action="{{ url_for('dashboard.reset_to_default') }}" onsubmit="return confirm('Reset all data to the default database? This will NOT delete anything meaningful, just resets if logs are messy/duped from testing :)');">
+                <button type="submit" class="sidebar-reset-btn">
+                    <span class="icon">&#8634;</span> Reset to Default
+                </button>
+            </form>
         </div>
 
         <div class="sidebar-user">
