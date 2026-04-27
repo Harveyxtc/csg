@@ -15,7 +15,7 @@ import requests
 MAILPIT_API = os.environ.get("MAILPIT_API", "http://10.0.3.2:8025/api/v1/messages")
 MAILPIT_TAGS_API = os.environ.get("MAILPIT_TAGS_API", "http://10.0.3.2:8025/api/v1/tags")
 MAILPIT_MSG = os.environ.get("MAILPIT_MSG", "http://10.0.3.2:8025/api/v1/message")
-SMTP_HOST = os.environ.get("SMTP_HOST", "10.0.3.2:8025")
+SMTP_HOST = os.environ.get("SMTP_HOST", "10.0.3.2")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "1025"))
 POLL_SECONDS = 1
 ANALYSED_TAG = "Analysed"
