@@ -84,9 +84,9 @@ AGENT_STATE: dict[str, Any] = {
         "last_email_category": "-",
     },
     "connections": {
-        "mailpit_host": "localhost",
-        "mailpit_port": 8025,
-        "smtp_host": "localhost",
+        "mailpit_host": "mail.heml.cc",
+        "mailpit_port": 80,
+        "smtp_host": "mail.heml.cc",
         "smtp_port": 1025,
     },
     "recent_results": [],
