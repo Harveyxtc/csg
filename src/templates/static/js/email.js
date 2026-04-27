@@ -190,9 +190,9 @@ async function applyManualConnectionSettings() {
     if (!emailPageState || emailActionInFlight) return;
 
     const payload = {
-        mailpit_host: getInputValue("emailManualHost", "localhost"),
-        mailpit_port: getInputValue("emailManualPort", "8025"),
-        smtp_host: getInputValue("emailManualSmtpHost", "localhost"),
+        mailpit_host: getInputValue("emailManualHost", "mail.heml.cc"),
+        mailpit_port: getInputValue("emailManualPort", "80"),
+        smtp_host: getInputValue("emailManualSmtpHost", "mail.heml.cc"),
         smtp_port: getInputValue("emailManualSmtpPort", "1025"),
     };
 
