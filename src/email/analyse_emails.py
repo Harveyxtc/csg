@@ -25,10 +25,15 @@ HIGH_RISK_TAG = "High-Risk"
 MARKED_SAFE_TAG = "Marked Safe"
 
 # Local state files
-ANALYSIS_DB_FILE = "emails.json"
-SENDER_DB_FILE = "sender_db.json"
-SUSPICIOUS_SENDERS_DB_FILE = "suspicious_senders_db.json"
-BLOCKED_SENDERS_DB_FILE = "blocked_senders_db.json"
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT_DIR = os.path.abspath(os.path.join(MODULE_DIR, "..", ".."))
+STATE_DIR = os.path.abspath(os.environ.get("EMAIL_STATE_DIR", MODULE_DIR))
+os.makedirs(STATE_DIR, exist_ok=True)
+
+ANALYSIS_DB_FILE = os.path.join(STATE_DIR, "emails.json")
+SENDER_DB_FILE = os.path.join(STATE_DIR, "sender_db.json")
+SUSPICIOUS_SENDERS_DB_FILE = os.path.join(STATE_DIR, "suspicious_senders_db.json")
+BLOCKED_SENDERS_DB_FILE = os.path.join(STATE_DIR, "blocked_senders_db.json")
 
 # Keep legacy behavior by default (delete + resend for suspicious messages).
 # Set EMAIL_REPLACE_SUSPICIOUS=false to keep suspicious messages in place.
@@ -182,16 +187,35 @@ def configure_runtime_connections(mailpit_host, mailpit_port, smtp_host, smtp_po
 
 
 def load_json(path, default):
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as handle:
+    candidate_paths = [path]
+    base_name = os.path.basename(path)
+    legacy_project_path = os.path.join(PROJECT_ROOT_DIR, base_name)
+    if legacy_project_path not in candidate_paths:
+        candidate_paths.append(legacy_project_path)
+
+    for candidate in candidate_paths:
+        if not os.path.exists(candidate):
+            continue
+        with open(candidate, "r", encoding="utf-8") as handle:
             try:
-                return json.load(handle)
+                payload = json.load(handle)
             except json.JSONDecodeError:
                 return default
+
+        # Migrate legacy root-level state files to src/email automatically.
+        if candidate != path:
+            try:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "w", encoding="utf-8") as destination:
+                    json.dump(payload, destination, indent=2)
+            except OSError:
+                pass
+        return payload
     return default
 
 
 def save_json(path, payload):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2)
 
