@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -17,12 +18,17 @@ AGENT_HOST = os.environ.get("EMAIL_AGENT_HOST", "127.0.0.1")
 AGENT_PORT = int(os.environ.get("EMAIL_AGENT_PORT", "8766"))
 AGENT_BASE_URL = os.environ.get("EMAIL_AGENT_URL", f"http://{AGENT_HOST}:{AGENT_PORT}")
 AGENT_TIMEOUT = float(os.environ.get("EMAIL_AGENT_TIMEOUT", "5"))
+AGENT_STARTUP_TIMEOUT = float(os.environ.get("EMAIL_AGENT_STARTUP_TIMEOUT", "10"))
 AGENT_AUTOSTART = os.environ.get("EMAIL_AGENT_AUTOSTART", "true").strip().lower() not in {
     "0",
     "false",
     "no",
     "off",
 }
+AGENT_LOG_PATH = os.environ.get(
+    "EMAIL_AGENT_LOG_PATH",
+    os.path.join(tempfile.gettempdir(), "ppd_email_agent.log"),
+)
 AGENT_PROCESS: subprocess.Popen | None = None
 
 
@@ -55,22 +61,39 @@ def ensure_agent_running() -> None:
         str(AGENT_PORT),
     ]
     creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-    AGENT_PROCESS = subprocess.Popen(
-        command,
-        cwd=PROJECT_DIR,
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        creationflags=creationflags,
-    )
+    log_dir = os.path.dirname(AGENT_LOG_PATH)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+    with open(AGENT_LOG_PATH, "a", encoding="utf-8", errors="replace") as log_file:
+        log_file.write(f"\n=== Email agent startup attempt {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+        AGENT_PROCESS = subprocess.Popen(
+            command,
+            cwd=PROJECT_DIR,
+            env=env,
+            stdout=log_file,
+            stderr=log_file,
+            creationflags=creationflags,
+        )
 
-    deadline = time.time() + 4
+    deadline = time.time() + max(3.0, AGENT_STARTUP_TIMEOUT)
     while time.time() < deadline:
         if is_agent_available():
             return
+        if AGENT_PROCESS.poll() is not None:
+            break
         time.sleep(0.15)
 
-    raise EmailAgentError("Local email agent did not start")
+    exit_code = AGENT_PROCESS.poll()
+    if exit_code is not None:
+        raise EmailAgentError(
+            "Local email agent exited during startup "
+            f"(code {exit_code}). Check log: {AGENT_LOG_PATH}"
+        )
+
+    raise EmailAgentError(
+        "Local email agent did not start within "
+        f"{max(3.0, AGENT_STARTUP_TIMEOUT):.1f}s. Check log: {AGENT_LOG_PATH}"
+    )
 
 
 def is_agent_available() -> bool:
@@ -119,4 +142,3 @@ def request_json(
             return {"success": False, "error": response_body or str(error)}, error.code
     except URLError as error:
         raise EmailAgentError(f"Local email agent is unavailable: {error}") from error
-
