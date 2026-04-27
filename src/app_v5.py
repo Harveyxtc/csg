@@ -30,6 +30,7 @@ from src.config import Config
 from src.database import init_db
 from src.auth.auth_manager import AuthManager
 from src.routes.dashboard_routes_v4 import dashboard_blueprint
+from src.routes.email_routes import email_blueprint
 from src.routes.malware_routes import malware_blueprint
 from src.routes.auth_routes import auth_blueprint
 
@@ -61,6 +62,7 @@ def create_app():
     # ── Register Blueprints ──
     app.register_blueprint(dashboard_blueprint)
     app.register_blueprint(malware_blueprint)
+    app.register_blueprint(email_blueprint)
     app.register_blueprint(auth_blueprint)
 
     # ── Create Default Admin Account ──

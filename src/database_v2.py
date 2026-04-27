@@ -5,8 +5,8 @@ Uses SQLite for local storage of threat events, configurations, and logs.
 
 import sqlite3
 import os
-from datetime import datetime
 from src.config import Config
+from src.timezone import perth_now
 
 
 def get_db_connection():
@@ -171,7 +171,7 @@ def update_event_status(event_id, new_status):
 def add_audit_entry(action, performed_by, details=""):
     """Add an entry to the audit log using local system time."""
     # Capture local time in a format SQLite understands (YYYY-MM-DD HH:MM:SS)
-    local_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    local_now = perth_now().strftime("%Y-%m-%d %H:%M:%S")
     
     conn = get_db_connection()
     conn.execute(
@@ -301,3 +301,4 @@ def get_dashboard_stats():
         "events_by_hour": [dict(r) for r in events_by_hour],
         "severity_by_day": [dict(r) for r in severity_by_day],
     }
+
