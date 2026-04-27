@@ -25,7 +25,14 @@ from src.detection.detector import DetectionEngine
 from src.reporting.report_generator import ReportGenerator
 #from src.chatbot.assistant import SecurityAssistant
 from src.config import Config
-from src.agent.malware_agent_client import is_agent_available, request_json
+from src.agent.email_agent_client import (
+    is_agent_available as is_email_agent_available,
+    request_json as email_request_json,
+)
+from src.agent.malware_agent_client import (
+    is_agent_available as is_malware_agent_available,
+    request_json as malware_request_json,
+)
 
 
 dashboard_blueprint = Blueprint(
@@ -125,10 +132,10 @@ def _stop_active_folder_monitors(username):
     """Stop active folder monitors before resetting data."""
     stopped = 0
 
-    if not is_agent_available():
+    if not is_malware_agent_available():
         return stopped
 
-    stop_all_data, stop_all_status = request_json(
+    stop_all_data, stop_all_status = malware_request_json(
         "POST",
         "/folder-monitor/stop-all",
         payload={},
@@ -140,7 +147,7 @@ def _stop_active_folder_monitors(username):
         return int(stop_all_data.get("stopped", 0) or 0)
 
     # Fallback for older agents: stop this user's active sessions.
-    sessions_data, status = request_json(
+    sessions_data, status = malware_request_json(
         "GET",
         "/folder-monitor/sessions",
         username=username,
@@ -158,7 +165,7 @@ def _stop_active_folder_monitors(username):
         if not session_id:
             continue
 
-        request_json(
+        malware_request_json(
             "POST",
             "/folder-monitor/stop",
             payload={"session_id": session_id},
@@ -190,6 +197,126 @@ def _remove_sqlite_sidecar_files(database_path):
             os.remove(sidecar_path)
 
 
+def _stop_email_analysis(username):
+    """Stop email analysis scanning if the local email agent is currently running."""
+    try:
+        if not is_email_agent_available():
+            return False
+
+        payload, status = email_request_json(
+            "POST",
+            "/email/stop",
+            payload={},
+            username=username,
+            ensure_running=False,
+            timeout=3,
+        )
+        return status == 200 and bool(payload.get("success"))
+    except Exception:
+        return False
+
+
+def _email_state_file_paths():
+    """
+    Return email state JSON paths for both current and legacy layouts.
+    Current default lives under src/email.
+    """
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    default_state_dir = os.path.join(project_root, "src", "email")
+    state_dir = os.path.abspath(os.environ.get("EMAIL_STATE_DIR", default_state_dir))
+    names = [
+        "emails.json",
+        "sender_db.json",
+        "suspicious_senders_db.json",
+        "blocked_senders_db.json",
+    ]
+
+    paths = []
+    seen = set()
+    for base_dir in (state_dir, project_root):
+        for name in names:
+            candidate = os.path.abspath(os.path.join(base_dir, name))
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            paths.append(candidate)
+    return paths
+
+
+def _clear_email_state_files():
+    """Delete persisted email-analysis JSON state files."""
+    removed = []
+    for path in _email_state_file_paths():
+        if not os.path.exists(path):
+            continue
+        if not os.path.isfile(path):
+            continue
+        try:
+            os.remove(path)
+            removed.append(path)
+        except OSError:
+            continue
+    return removed
+
+
+def _restore_malware_demo_files():
+    """
+    Restore demo malware sample files based on host platform.
+    - Linux: copy from malware_test_default to /downloads
+    - Windows: copy from malware_test_default to malware_test_files
+    """
+    try:
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        source_dir = os.path.join(project_root, "malware_test_default")
+        if not os.path.isdir(source_dir):
+            return {"mode": "none", "files_processed": 0, "destination": "", "note": "source_missing"}
+
+        source_files = [
+            name for name in os.listdir(source_dir)
+            if os.path.isfile(os.path.join(source_dir, name))
+        ]
+        if not source_files:
+            return {"mode": "none", "files_processed": 0, "destination": "", "note": "source_empty"}
+
+        if os.name == "nt":
+            destination_dir = os.path.join(project_root, "malware_test_files")
+            os.makedirs(destination_dir, exist_ok=True)
+            processed = 0
+            for name in source_files:
+                src = os.path.join(source_dir, name)
+                dst = os.path.join(destination_dir, name)
+                shutil.copy2(src, dst)
+                processed += 1
+            return {
+                "mode": "windows_copy",
+                "files_processed": processed,
+                "destination": destination_dir,
+                "note": "",
+            }
+
+        destination_dir = "/downloads"
+        os.makedirs(destination_dir, exist_ok=True)
+        processed = 0
+        for name in source_files:
+            src = os.path.join(source_dir, name)
+            dst = os.path.join(destination_dir, name)
+            shutil.copy2(src, dst)
+            processed += 1
+        return {
+            "mode": "linux_copy",
+            "files_processed": processed,
+            "destination": destination_dir,
+            "note": "",
+        }
+    except Exception as error:
+        return {
+            "mode": "error",
+            "files_processed": 0,
+            "destination": "",
+            "note": str(error),
+        }
+
+
 @dashboard_blueprint.route("/reset-default", methods=["POST"])
 @login_required
 def reset_to_default():
@@ -214,15 +341,38 @@ def reset_to_default():
 
     try:
         stopped_count = _stop_active_folder_monitors(current_user.username)
+        email_stopped = _stop_email_analysis(current_user.username)
+        removed_email_files = _clear_email_state_files()
+        malware_demo_result = _restore_malware_demo_files()
         _checkpoint_sqlite_database(database_path)
         shutil.copy2(default_database_path, database_path)
         _remove_sqlite_sidecar_files(database_path)
         add_audit_entry(
             action="reset_to_default",
             performed_by=current_user.username,
-            details=f"Database reset to default. Stopped {stopped_count} active folder monitor session(s).",
+            details=(
+                "Database reset to default. "
+                f"Stopped {stopped_count} active folder monitor session(s). "
+                f"Email analysis stopped={email_stopped}. "
+                f"Email state files removed={len(removed_email_files)}. "
+                f"Malware demo sync mode={malware_demo_result.get('mode')} "
+                f"files={malware_demo_result.get('files_processed', 0)} "
+                f"destination={malware_demo_result.get('destination') or '-'}."
+            ),
         )
-        flash("Database reset to default successfully.", "success")
+        flash(
+            "Database reset complete. "
+            f"Stopped malware monitors: {stopped_count}. "
+            f"Email scan stopped: {'yes' if email_stopped else 'no'}. "
+            f"Email state files removed: {len(removed_email_files)}. "
+            f"Demo files synced: {malware_demo_result.get('files_processed', 0)}.",
+            "success",
+        )
+        if malware_demo_result.get("mode") == "error":
+            flash(
+                f"Demo file sync warning: {malware_demo_result.get('note', 'unknown error')}",
+                "warning",
+            )
     except Exception as error:
         flash(f"Reset failed: {error}", "danger")
 
@@ -467,4 +617,3 @@ def chat():
         details=f"AI used for message: {user_message[:80]}"
     )
     return jsonify({"response": ai_answer})
-
