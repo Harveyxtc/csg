@@ -1,71 +1,491 @@
 {% extends "base.html" %}
 
 {% block title %}Email Analysis - Project Proactive Defense{% endblock %}
+{% block auto_refresh_meta %}{% endblock %}
 
 {% block content %}
+<div
+    id="emailPageState"
+    data-status-url="{{ url_for('email_api.get_email_status') }}"
+    data-start-url="{{ url_for('email_api.start_email_analysis') }}"
+    data-stop-url="{{ url_for('email_api.stop_email_analysis') }}"
+    data-run-once-url="{{ url_for('email_api.run_email_analysis_once') }}"
+    data-configure-manual-url="{{ url_for('email_api.configure_email_manual_connection') }}"
+    data-events-url="{{ url_for('dashboard.api_events') }}"
+></div>
+
 <div class="page-header">
-    <h1>Email Analysis Module</h1>
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; width: 100%;">
+        <h1 style="margin: 0;">Email Analysis Module</h1>
+        <div style="display: inline-flex; justify-self: end; align-items: center; gap: 10px;">
+            <button id="mailboxConfigBtn" type="button" class="btn" style="padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #334155 0%, #1e293b 100%); color: #fff; border: 1px solid #1e293b; box-shadow: 0 8px 18px rgba(30, 41, 59, 0.24);">
+                Mailbox
+            </button>
+            <button id="moduleInfoBtn" type="button" class="btn" style="padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: #fff; border: 1px solid var(--primary); box-shadow: 0 8px 18px rgba(75, 0, 130, 0.24);">
+                About
+            </button>
+        </div>
+    </div>
+</div>
+
+<dialog id="moduleInfoDialog" style="position: fixed; inset: 0; margin: auto; max-width: 640px; width: calc(100% - 32px); border: none; border-radius: 12px; padding: 0; box-shadow: 0 24px 60px rgba(0,0,0,0.18); background: transparent; overflow: hidden;">
+    <div style="padding: 20px 22px; background: #fff;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px;">
+            <h3 style="margin: 0;">About This Module</h3>
+            <button id="moduleInfoCloseBtn" type="button" class="btn btn-sm btn-secondary" style="cursor: pointer;">Close</button>
+        </div>
+        <p style="margin: 0; line-height: 1.6; color: #4b5563;">
+            The Email Analysis module scans email metadata and content for indicators of phishing,
+            malicious links, suspicious attachments, and other email-based threats. Each suspicious
+            email is assigned a risk level with plain-English explanations and recommended actions.
+        </p>
+    </div>
+</dialog>
+
+<dialog id="mailboxConfigDialog" style="position: fixed; inset: 0; margin: auto; max-width: 760px; width: calc(100% - 32px); border: none; border-radius: 12px; padding: 0; box-shadow: 0 24px 60px rgba(0,0,0,0.18); background: transparent; overflow: hidden;">
+    <div style="padding: 20px 22px; background: #fff;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px;">
+            <h3 style="margin: 0;">Mailbox Connection</h3>
+            <button id="mailboxConfigCloseBtn" type="button" class="btn btn-sm btn-secondary" style="cursor: pointer;">Close</button>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+            <button id="emailOutlookLoginBtn" type="button" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; background: #0a66ff; color: #fff; font-size: 11px; font-weight: 800;">O</span>
+                Outlook
+            </button>
+            <button id="emailGmailLoginBtn" type="button" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; background: #ea4335; color: #fff; font-size: 11px; font-weight: 800;">G</span>
+                Gmail
+            </button>
+            <button id="emailManualModeBtn" type="button" class="btn btn-primary">Manual</button>
+        </div>
+
+        <p id="mailboxProviderNotice" style="display: none; margin: 0 0 12px 0; font-size: 13px;"></p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+            <div>
+                <label for="emailManualHost" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px;">Host + Port</label>
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 8px;">
+                    <input id="emailManualHost" type="text" class="form-control" value="localhost" placeholder="Host">
+                    <input id="emailManualPort" type="number" class="form-control" value="8025" min="1" max="65535" placeholder="Port">
+                </div>
+            </div>
+            <div>
+                <label for="emailManualSmtpHost" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px;">SMTP + Port</label>
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 8px;">
+                    <input id="emailManualSmtpHost" type="text" class="form-control" value="localhost" placeholder="SMTP Host">
+                    <input id="emailManualSmtpPort" type="number" class="form-control" value="1025" min="1" max="65535" placeholder="Port">
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 12px;">
+            <button id="applyEmailManualConfigBtn" type="button" class="btn btn-success">Apply Manual Settings</button>
+        </div>
+    </div>
+</dialog>
+
+<div class="stats-grid">
+    <div class="stat-card total">
+        <div class="stat-value" id="emailStatAnalysed">0</div>
+        <div class="stat-label">Emails Analysed</div>
+    </div>
+    <div class="stat-card medium">
+        <div class="stat-value" id="emailStatSuspicious">0</div>
+        <div class="stat-label">Suspicious Emails</div>
+    </div>
+    <div class="stat-card high">
+        <div class="stat-value" id="emailStatPhishing">0</div>
+        <div class="stat-label">Phishing Emails</div>
+    </div>
+    <div class="stat-card low">
+        <div class="stat-value" id="emailStatLowRisk">0</div>
+        <div class="stat-label">Low-Risk Emails</div>
+    </div>
+    <div class="stat-card open">
+        <div class="stat-value" id="emailStatLinks">0</div>
+        <div class="stat-label">Links Detected</div>
+    </div>
 </div>
 
 <div class="card mb-2">
-    <div class="card-header">About This Module</div>
-    <p>The Email Analysis module scans email metadata and content for indicators of phishing,
-       malicious links, suspicious attachments, and other email-based threats. Each suspicious
-       email is assigned a risk level with plain-English explanations and recommended actions.</p>
+    <div class="card-header flex-between">
+        <span>Analysis Control</span>
+        <span id="emailScanStatusBadge" class="badge badge-open">Running</span>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+        <button id="toggleEmailScanBtn" type="button" class="btn btn-danger">Turn Off Analysis</button>
+        <button id="runEmailScanOnceBtn" type="button" class="btn btn-primary">Analyse Now</button>
+        <span style="font-size: 13px; color: #616161;">
+            Last analysis: <strong id="emailLastScanAt">-</strong>
+        </span>
+    </div>
+    <p id="emailAgentError" style="margin-top: 12px; color: #b91c1c; display: none;"></p>
 </div>
+
+<style>
+    .email-events-table th {
+        padding: 10px;
+        font-size: 14px;
+        text-align: left;
+        color: #ffffff;
+        background: var(--primary);
+        letter-spacing: 0;
+        white-space: nowrap;
+    }
+
+    .email-events-table thead tr {
+        background: var(--primary);
+        border-bottom: 2px solid var(--primary-light);
+    }
+
+    .email-events-table thead th:first-child {
+        border-top-left-radius: 6px;
+    }
+
+    .email-events-table thead th:last-child {
+        border-top-right-radius: 6px;
+    }
+
+    .email-events-table td {
+        vertical-align: middle;
+        padding: 14px 16px;
+    }
+
+    .email-severity-pill,
+    .email-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 86px;
+        font-weight: 700;
+        font-size: 12px;
+    }
+
+    .email-severity-dot,
+    .email-status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        flex: 0 0 auto;
+    }
+
+    .email-severity-high .email-severity-dot { background: #dc2626; box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12); }
+    .email-severity-medium .email-severity-dot { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12); }
+    .email-severity-low .email-severity-dot { background: #16a34a; box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12); }
+    .email-severity-info .email-severity-dot { background: #6b7280; box-shadow: 0 0 0 4px rgba(107, 114, 128, 0.12); }
+
+    .email-status-open .email-status-dot { background: #dc2626; }
+    .email-status-acknowledged .email-status-dot { background: #2563eb; }
+    .email-status-resolved .email-status-dot { background: #16a34a; }
+
+    .email-title-label {
+        font-weight: 700;
+        color: #111827;
+        max-width: 420px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .email-events-table th:nth-child(2),
+    .email-events-table td:nth-child(2) {
+        min-width: 320px;
+    }
+
+    .email-sender-label {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 12px;
+        color: #374151;
+        width: 220px;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .email-threat-label {
+        font-weight: 700;
+        color: #111827;
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .email-time-label {
+        display: inline-block;
+        min-width: 96px;
+        white-space: nowrap;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .email-event-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .email-ack-btn {
+        background: #f57f17;
+        color: #fff;
+    }
+
+    .email-ack-btn:hover {
+        background: #e65100;
+        color: #fff;
+    }
+
+    .email-delete-btn {
+        background: #b91c1c;
+        color: #fff;
+    }
+
+    .email-delete-btn:hover {
+        background: #991b1b;
+        color: #fff;
+    }
+
+    .email-block-btn {
+        background: #334155;
+        color: #fff;
+    }
+
+    .email-block-btn:hover {
+        background: #1e293b;
+        color: #fff;
+    }
+
+    .email-event-dialog {
+        width: min(1100px, calc(100vw - 32px));
+        border: none;
+        border-radius: 8px;
+        padding: 0;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.35);
+    }
+
+    .email-event-dialog::backdrop {
+        background: rgba(15, 23, 42, 0.45);
+    }
+
+    .email-event-dialog-header {
+        padding: 20px 22px 16px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .email-event-dialog-body {
+        padding: 18px 22px 22px;
+    }
+
+    .email-event-meta {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 16px 0;
+    }
+
+    .email-event-meta div {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 10px;
+        min-width: 0;
+    }
+
+    .email-event-meta span {
+        display: block;
+        color: #6b7280;
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .email-event-meta strong {
+        display: block;
+        color: #111827;
+        overflow-wrap: anywhere;
+    }
+
+    .email-event-detail-section {
+        border-top: 1px solid #e5e7eb;
+        padding-top: 16px;
+        margin-top: 16px;
+    }
+
+    .email-event-detail-section h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #111827;
+    }
+
+    .email-event-detail-section p,
+    .email-event-detail-section div {
+        color: #374151;
+        line-height: 1.55;
+        white-space: pre-wrap;
+    }
+
+    .email-event-dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 16px;
+        margin-top: 18px;
+    }
+
+    .email-event-dialog-actions .btn {
+        padding: 12px 23px;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .email-event-header-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .email-event-detection-list {
+        margin: 0;
+        padding-left: 20px;
+    }
+
+    .email-event-detection-list li {
+        margin: 0 0 6px 0;
+    }
+
+    @media (max-width: 760px) {
+        .email-event-meta {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 
 <div class="card">
     <div class="card-header flex-between">
-        <span>Email Analysis Events ({{ events|length }})</span>
+        <span>Email Analysis Events (<span id="emailEventsCount">{{ events|length }}</span>)</span>
     </div>
-
-    {% if events %}
     <div class="table-responsive">
-        <table>
+        <table class="email-events-table">
             <thead>
                 <tr>
-                    <th>Time</th>
-                    <th>Threat</th>
                     <th>Severity</th>
-                    <th>User</th>
-                    <th>What Happened</th>
-                    <th>What To Do</th>
+                    <th>Email Title</th>
+                    <th>Threat Type</th>
+                    <th>Sender</th>
+                    <th>Time</th>
                     <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="emailEventsTableBody">
                 {% for event in events %}
                 <tr>
-                    <td style="white-space:nowrap;">{{ event.timestamp }}</td>
-                    <td><strong>{{ event.event_type }}</strong></td>
                     <td><span class="badge badge-{{ event.severity|lower }}">{{ event.severity }}</span></td>
-                    <td>{{ event.user_affected or '-' }}</td>
-                    <td style="max-width:250px;">{{ event.explanation }}</td>
-                    <td style="max-width:250px;">{{ event.recommendation }}</td>
+                    <td><div class="email-title-label">-</div></td>
+                    <td><div class="email-threat-label">{{ event.event_type }}</div></td>
+                    <td><div class="email-sender-label">{{ event.user_affected or "-" }}</div></td>
+                    <td style="white-space: nowrap;">{{ event.timestamp }}</td>
+                    <td><span class="badge badge-{{ event.status|lower }}">{{ event.status }}</span></td>
                     <td>
-                        <span class="badge badge-{{ event.status|lower }}">{{ event.status }}</span>
-                        {% if event.status == 'Open' %}
-                        <form method="POST" action="{{ url_for('dashboard.change_event_status', event_id=event.id) }}" style="margin-top:4px;">
-                            <input type="hidden" name="status" value="Acknowledged">
-                            <button type="submit" class="btn btn-sm btn-info">Acknowledge</button>
-                        </form>
-                        {% elif event.status == 'Acknowledged' %}
-                        <form method="POST" action="{{ url_for('dashboard.change_event_status', event_id=event.id) }}" style="margin-top:4px;">
-                            <input type="hidden" name="status" value="Resolved">
-                            <button type="submit" class="btn btn-sm btn-success">Resolve</button>
-                        </form>
-                        {% endif %}
+                        <div class="email-event-actions">
+                            <button type="button" class="btn btn-sm btn-info email-event-view-btn" data-event="{{ event|tojson|forceescape }}">View</button>
+                            {% if event.status == "Open" %}
+                            <form method="POST" action="{{ url_for('dashboard.change_event_status', event_id=event.id) }}">
+                                <input type="hidden" name="status" value="Acknowledged">
+                                <button type="submit" class="btn btn-sm email-ack-btn">Acknowledge</button>
+                            </form>
+                            {% elif event.status == "Acknowledged" %}
+                            <form method="POST" action="{{ url_for('dashboard.change_event_status', event_id=event.id) }}">
+                                <input type="hidden" name="status" value="Resolved">
+                                <button type="submit" class="btn btn-sm btn-success">Resolve</button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
+                {% if not events %}
+                <tr>
+                    <td colspan="7" style="padding: 20px; text-align: center; color: #999;">No email analysis events have been recorded yet.</td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
-    {% else %}
-    <div class="text-center text-muted" style="padding: 40px;">
-        <p>No email analysis events have been recorded.</p>
-        <p class="mt-1">Upload log files and run a detection scan from the dashboard.</p>
-    </div>
-    {% endif %}
 </div>
+
+<dialog id="emailEventDetailDialog" class="email-event-dialog">
+    <div class="email-event-dialog-header">
+        <div>
+            <div id="emailEventDialogSeverity"></div>
+            <h3 id="emailEventDialogTitle" style="margin: 10px 0 0; font-size: 20px;">Email Event</h3>
+        </div>
+        <div class="email-event-header-actions">
+            <button type="button" id="emailEventDialogDetectionBtn" class="btn btn-sm btn-info">Detection Reasons</button>
+            <button type="button" id="emailEventDialogClose" class="btn btn-sm btn-secondary">Close</button>
+        </div>
+    </div>
+    <div class="email-event-dialog-body">
+        <div class="email-event-meta">
+            <div>
+                <span>&#128101; User</span>
+                <strong id="emailEventDialogUser">-</strong>
+            </div>
+            <div>
+                <span>&#128338; Time</span>
+                <strong id="emailEventDialogTime">-</strong>
+            </div>
+            <div>
+                <span>&#127919; Risk Score</span>
+                <strong id="emailEventDialogRiskScore">-</strong>
+            </div>
+        </div>
+
+        <section class="email-event-detail-section">
+            <h4>&#128231; Email Title</h4>
+            <p id="emailEventDialogEmailTitle">-</p>
+        </section>
+
+        <section class="email-event-detail-section">
+            <h4>&#128100; Sender</h4>
+            <p id="emailEventDialogSender">-</p>
+        </section>
+
+        <section class="email-event-detail-section">
+            <h4>&#9888;&#65039; Threat Type</h4>
+            <p id="emailEventDialogThreatType">-</p>
+        </section>
+
+        <section class="email-event-detail-section">
+            <h4>&#129504; What Happened</h4>
+            <p id="emailEventDialogExplanation">-</p>
+        </section>
+
+        <section class="email-event-detail-section">
+            <h4>&#128736; Recommended Actions</h4>
+            <div id="emailEventDialogRecommendation">-</div>
+        </section>
+
+        <section id="emailEventDialogDetectionSection" class="email-event-detail-section" style="display: none;">
+            <h4>&#128269; Detection Reasons</h4>
+            <div id="emailEventDialogDetectionReasons">-</div>
+        </section>
+
+        <div class="email-event-dialog-actions">
+            <button type="button" id="emailEventAcknowledgeBtn" class="btn btn-sm email-ack-btn">Acknowledge</button>
+            <button type="button" id="emailEventDeleteBlockBtn" class="btn btn-sm email-delete-btn">Delete &amp; Block</button>
+            <button type="button" id="emailEventBlockSenderBtn" class="btn btn-sm email-block-btn">Block Sender</button>
+            <button type="button" id="emailEventMarkSafeBtn" class="btn btn-sm btn-success">Mark as Safe</button>
+        </div>
+    </div>
+</dialog>
+
+<script src="{{ url_for('dashboard.static', filename='js/email.js') }}"></script>
 {% endblock %}
