@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import threading
-from datetime import datetime
+from src.timezone import perth_now
 
 
 _SUMMARY_LOCK = threading.Lock()
-_APP_STARTED_AT = datetime.now()
+_APP_STARTED_AT = perth_now()
 _RUNTIME_SUMMARY = {
     "total_files_scanned": 0,
     "infected_files": 0,
@@ -86,7 +86,7 @@ def record_scan_result(scan_result):
     status = str(scan_result.get("status", "")).strip().lower()
     signature = str(scan_result.get("signature", "")).strip().lower()
     infected = status == "infected" or (signature and signature not in {"none", "unknown_signature"})
-    timestamp = scan_result.get("timestamp") or datetime.now().isoformat()
+    timestamp = scan_result.get("timestamp") or perth_now().isoformat()
 
     with _SUMMARY_LOCK:
         _RUNTIME_SUMMARY["total_files_scanned"] += 1
@@ -124,3 +124,4 @@ def get_runtime_scan_summary():
             "Scan Mode": "Runtime aggregate",
             "Scans Recorded": str(scan_count),
         }
+
