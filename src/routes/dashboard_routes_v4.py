@@ -10,6 +10,7 @@ import os
 import shutil
 import sqlite3
 
+from src.auth.auth_manager import AuthManager
 from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, send_from_directory, jsonify
@@ -55,6 +56,28 @@ def dashboard():
     recent_events = get_threat_events(limit=20)
     return render_template("dashboard_v2.html", stats=stats, events=recent_events)
 
+#-------------------------------------------------------------------------------------
+# 2. CREATE USER (The fix for your button)
+@dashboard_blueprint.route("/admin/create-user", methods=["POST"])
+@login_required
+def admin_create_user():
+    if current_user.role != 'admin':
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for('dashboard.dashboard'))
+
+    username = request.form.get("username")
+    password = request.form.get("password")
+    role = request.form.get("role", "analyst")
+
+    result = AuthManager.create_user(username, password, role, creator=current_user.username)
+    
+    if result.get("success"):
+        flash("User created successfully!", "success")
+    else:
+        flash(f"Error: {result.get('message', 'Failed to create user')}", "danger")
+    
+    return redirect(url_for('dashboard.dashboard'))
+
 
 # ──────────────────────────────────────────────────────────────
 # Module Views
@@ -64,17 +87,7 @@ def dashboard():
 def malware_module():
     """Malware Detection module — dedicated screen with history and actions."""
     events = get_threat_events(source_module="Malware Detection", limit=50)
-    clamd_warning_message = (
-        "ClamAV is not installed or ClamD is not running: "
-        "All functionality on this page will NOT function at all, "
-        "ClamAV and ClamD daemon is required"
-    )
-
-    return render_template(
-        "malware_v2.html",
-        events=events,
-        clamd_warning_message=clamd_warning_message,
-    )
+    return render_template("malware_v2.html", events=events)
 
 
 @dashboard_blueprint.route("/email")
@@ -267,14 +280,47 @@ def _restore_malware_demo_files():
     """
     try:
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-        source_dir = os.path.join(project_root, "malware_test_default")
-        if not os.path.isdir(source_dir):
-            return {"mode": "none", "files_processed": 0, "destination": "", "note": "source_missing"}
 
-        source_files = [
-            name for name in os.listdir(source_dir)
-            if os.path.isfile(os.path.join(source_dir, name))
+        def collect_files(directory):
+            collected = []
+            if not os.path.isdir(directory):
+                return collected
+            for root, _, files in os.walk(directory):
+                for name in files:
+                    path = os.path.join(root, name)
+                    if os.path.isfile(path):
+                        collected.append(path)
+            return collected
+
+        primary_candidates = [
+            os.path.join(project_root, "malware_test_default"),
+            os.path.join(project_root, "src", "malware_test_default"),
         ]
+        fallback_candidates = [
+            os.path.join(project_root, "malware_test_files"),
+            os.path.join(project_root, "src", "malware_test_files"),
+        ]
+
+        source_files = []
+        seen = set()
+        for directory in primary_candidates:
+            for path in collect_files(directory):
+                key = os.path.basename(path).lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                source_files.append(path)
+
+        # Some deployments only ship one default sample; pull from fallback set too.
+        if len(source_files) <= 1:
+            for directory in fallback_candidates:
+                for path in collect_files(directory):
+                    key = os.path.basename(path).lower()
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    source_files.append(path)
+
         if not source_files:
             return {"mode": "none", "files_processed": 0, "destination": "", "note": "source_empty"}
 
@@ -282,9 +328,8 @@ def _restore_malware_demo_files():
             destination_dir = os.path.join(project_root, "malware_test_files")
             os.makedirs(destination_dir, exist_ok=True)
             processed = 0
-            for name in source_files:
-                src = os.path.join(source_dir, name)
-                dst = os.path.join(destination_dir, name)
+            for src in source_files:
+                dst = os.path.join(destination_dir, os.path.basename(src))
                 shutil.copy2(src, dst)
                 processed += 1
             return {
@@ -297,9 +342,8 @@ def _restore_malware_demo_files():
         destination_dir = "/downloads"
         os.makedirs(destination_dir, exist_ok=True)
         processed = 0
-        for name in source_files:
-            src = os.path.join(source_dir, name)
-            dst = os.path.join(destination_dir, name)
+        for src in source_files:
+            dst = os.path.join(destination_dir, os.path.basename(src))
             shutil.copy2(src, dst)
             processed += 1
         return {
@@ -396,8 +440,19 @@ def ingest_logs():
 
             ingestor = LogIngestor()
             result = ingestor.ingest_csv(filepath, source_label=file.filename)
+            
             if result["success"]:
-                flash(f"Ingested {result['valid']} log entries ({result['rejected']} rejected).", "success")
+                engine = DetectionEngine()
+                scan_result = engine.run_detection()
+                
+                # --- TRIGGER POPUP LOGIC ---
+                if scan_result.get('detections', 0) > 0:
+                    # Category 'threat_found' triggers the RED Toast in your HTML
+                    flash(f"CRITICAL: {scan_result['detections']} threats found in {file.filename}!", "threat_found")
+                else:
+                    flash(f"Success: Ingested {result['valid']} clean entries.", "success")
+                
+                return redirect(url_for("dashboard.dashboard"))
             else:
                 flash(f"Ingestion error: {result.get('error', 'Unknown error')}", "danger")
         else:
@@ -415,10 +470,13 @@ def run_scan():
     """Manually trigger the detection engine to process new logs."""
     engine = DetectionEngine()
     result = engine.run_detection()
-    flash(
-        f"Scan complete: {result['processed']} logs processed, {result['detections']} threats detected.",
-        "success"
-    )
+    
+    # --- TRIGGER POPUP LOGIC ---
+    if result.get('detections', 0) > 0:
+        flash(f"MALWARE DETECTED: {result['detections']} alerts found during system scan!", "threat_found")
+    else:
+        flash(f"Scan complete: {result['processed']} logs checked. System is clean.", "success")
+        
     return redirect(url_for("dashboard.dashboard"))
 
 
