@@ -2,14 +2,9 @@
 Project Proactive Defense
 Main application entry point.
 
-A cybersecurity monitoring dashboard for SMEs that combines:
-- Module 1: Data Ingestion (log parsing and validation)
-- Module 2: Detection Engine (rule-based threat detection)
-- Module 3: Interpretation Engine (plain-English explanations)
-- Module 4: Report Generator (PDF/CSV export)
-- Module 5: Authentication & Scheduler (login, scheduled scans)
-
-Technology Stack: Python, Flask, SQLite, Chart.js
+Modified to support Role-Based Access Control (RBAC) with:
+- Admin Account: Full System Access
+- analyst Account: Restricted View-Only Access
 """
 
 import sys
@@ -65,9 +60,18 @@ def create_app():
     app.register_blueprint(email_blueprint)
     app.register_blueprint(auth_blueprint)
 
-    # ── Create Default Admin Account ──
+    # ── Create Default Accounts (RBAC Setup) ──
     with app.app_context():
+        # 1. Create High-Privilege Admin
         AuthManager.create_default_admin()
+        
+        # 2. Create Low-Privilege analyst111
+        # This user will be restricted in the route logic (e.g., cannot delete logs)
+        AuthManager.create_user(
+            username="analyst1", 
+            password="anal123", 
+            role="analyst"
+        )
 
     # ── Scheduler Setup (Module 5) ──
     scheduler = APScheduler()
@@ -96,7 +100,9 @@ if __name__ == "__main__":
     print("  Cyber Threat Monitoring Dashboard for SMEs")
     print("=" * 60)
     print("  URL:      http://127.0.0.1:5000")
-    print("  Login:    admin / admin123")
+    print("-" * 60)
+    print("  ADMIN LOGIN:    admin   / admin123")
+    print("  analyst1 LOGIN:  analyst1 / anal123")
     print("=" * 60 + "\n")
     
     # Run with debug enabled, but exclude data/ directory from reloader
