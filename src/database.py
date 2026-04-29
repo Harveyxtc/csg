@@ -7,6 +7,7 @@ import sqlite3
 import os
 from datetime import datetime
 from src.config import Config
+from src.timezone import perth_now
 
 
 def get_db_connection():
@@ -180,11 +181,12 @@ def update_event_status(event_id, new_status):
 
 
 def add_audit_entry(action, performed_by, details=""):
-    """Add an entry to the audit log."""
+    """Add an entry to the audit log using Perth local time."""
+    local_timestamp = perth_now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_db_connection()
     conn.execute(
-        "INSERT INTO audit_log (action, performed_by, details) VALUES (?, ?, ?)",
-        (action, performed_by, details)
+        "INSERT INTO audit_log (timestamp, action, performed_by, details) VALUES (?, ?, ?, ?)",
+        (local_timestamp, action, performed_by, details)
     )
     conn.commit()
     conn.close()
