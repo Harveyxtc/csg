@@ -11,6 +11,12 @@
     <title>{% block title %}Project Proactive Defense{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .swal2-toast {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        }
+    </style>
 </head>
 <body>
 
@@ -222,6 +228,43 @@ function removeTyping(id) {
     const el = document.getElementById(id);
     if (el) el.remove();
 }
+
+/* ── Toast Notification Logic ── */
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: true,
+    timer: undefined,
+    timerProgressBar: false,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+});
+
+function triggerToast(message, iconType = 'error') {
+    Toast.fire({
+        icon: iconType,
+        title: 'Security Alert',
+        text: message
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'danger' or category == 'error' or category == 'threat_found' %}
+                    triggerToast("{{ message }}", 'error');
+                {% elif category == 'success' %}
+                    triggerToast("{{ message }}", 'success');
+                {% else %}
+                    triggerToast("{{ message }}", 'info');
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+});
 </script>
 {% endif %}
 
